@@ -29,23 +29,29 @@ export function AssociationCard({ association, onOpen }: AssociationCardProps) {
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-lg font-bold text-navy">{association.name}</h2>
         <span className="shrink-0 rounded-full bg-green/10 px-3 py-1 text-sm font-semibold text-green">
-          {cycleLabel(association.cycle)}
+          {association.role === "owner" ? "صاحبها" : "مشترك"}
         </span>
       </div>
       <p className="mt-2 text-sm text-muted">
-        من {formatArabicDate(association.startDate)}
+        {cycleLabel(association.cycle)} · من {formatArabicDate(association.startDate)}
         {end ? ` إلى ${formatArabicDate(end)}` : ""}
       </p>
       <div className="mt-4">
-        <div className="mb-1.5 flex items-center justify-between text-sm">
-          <span className="text-muted">الأسهم المشغولة</span>
-          <span dir="ltr" className="font-semibold text-navy">
-            {used}/{association.shareCount}
-          </span>
-        </div>
-        <div className="flex h-2 overflow-hidden rounded-full bg-navy/10">
-          <div className="h-full shrink-0 rounded-full bg-green" style={{ width: `${progress}%` }} />
-        </div>
+        {association.role === "owner" ? (
+          <>
+            <div className="mb-1.5 flex items-center justify-between text-sm">
+              <span className="text-muted">الأسهم المشغولة</span>
+              <span dir="ltr" className="font-semibold text-navy">
+                {used}/{association.shareCount}
+              </span>
+            </div>
+            <div className="flex h-2 overflow-hidden rounded-full bg-navy/10">
+              <div className="h-full shrink-0 rounded-full bg-green" style={{ width: `${progress}%` }} />
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-muted">عدد الأسهم مكتمل: {association.shareCount}</p>
+        )}
         <p className="mt-3 text-sm font-semibold text-green">
           <span>القبض </span>
           <span dir="ltr">

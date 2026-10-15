@@ -12,7 +12,7 @@ import {
   payoutAmount,
   todayISO,
 } from "../lib/schedule.ts";
-import type { Association, Cycle } from "../types.ts";
+import type { Association, AssociationRole, Cycle } from "../types.ts";
 
 interface CreatePageProps {
   onBack: () => void;
@@ -24,6 +24,7 @@ const MAX_SHARES = 60;
 
 export function CreatePage({ onBack, onCreate }: CreatePageProps) {
   const [name, setName] = useState("");
+  const [role, setRole] = useState<AssociationRole>("owner");
   const [cycle, setCycle] = useState<Cycle>("monthly");
   const [shareCount, setShareCount] = useState(10);
   const [shareAmount, setShareAmount] = useState("");
@@ -60,6 +61,7 @@ export function CreatePage({ onBack, onCreate }: CreatePageProps) {
     onCreate({
       id: createId(),
       name: trimmed,
+      role,
       cycle,
       shareCount,
       shareAmount: parsedAmount,
@@ -94,6 +96,38 @@ export function CreatePage({ onBack, onCreate }: CreatePageProps) {
             className="h-12 rounded-2xl border border-line bg-white px-4 text-base outline-none focus:border-green"
           />
         </label>
+
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-sm font-semibold text-navy">دورك في الجمعية</legend>
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                ["owner", "صاحبها"],
+                ["member", "مشترك فقط"],
+              ] as const
+            ).map(([option, label]) => {
+              const selected = role === option;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setRole(option)}
+                  className={`h-12 rounded-2xl text-base font-bold ${
+                    selected ? "bg-navy text-white" : "bg-white text-navy shadow-sm"
+                  }`}
+                  aria-pressed={selected}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <span className="text-sm text-muted">
+            {role === "owner"
+              ? "هتضيف المشتركين وتدي كل واحد دوره."
+              : "عدد الأسهم مكتمل. هتختار بس الدور اللي هتقبض فيه."}
+          </span>
+        </fieldset>
 
         <fieldset className="flex flex-col gap-2">
           <legend className="text-sm font-semibold text-navy">نظام الجمعية</legend>

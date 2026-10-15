@@ -1,5 +1,7 @@
 export type Cycle = "monthly" | "weekly";
 
+export type AssociationRole = "owner" | "member";
+
 export type ShareCount = 1 | 2 | 3;
 
 export interface Member {
@@ -13,6 +15,7 @@ export interface Member {
 export interface Association {
   id: string;
   name: string;
+  role: AssociationRole;
   cycle: Cycle;
   shareCount: number;
   shareAmount: number;

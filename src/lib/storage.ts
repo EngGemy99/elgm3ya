@@ -1,4 +1,4 @@
-import type { Association, Cycle, Member, ShareCount } from "../types.ts";
+import type { Association, AssociationRole, Cycle, Member, ShareCount } from "../types.ts";
 
 const STORAGE_KEY = "elgm3ya.associations";
 
@@ -22,14 +22,17 @@ function isMember(value: unknown): value is Member {
   );
 }
 
+function normalizeRole(value: unknown): AssociationRole {
+  return value === "member" ? "member" : "owner";
+}
+
 function normalizeMember(member: Member): Member {
-  const isSelf = member.isSelf === true;
   return {
     id: member.id,
     name: member.name,
     shares: member.shares,
-    isSelf,
-    roundIndexes: isSelf ? member.roundIndexes : [],
+    isSelf: member.isSelf === true,
+    roundIndexes: member.roundIndexes.filter((index) => Number.isInteger(index)),
   };
 }
 
@@ -61,6 +64,7 @@ export function loadAssociations(): Association[] {
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(isAssociation).map((association) => ({
       ...association,
+      role: normalizeRole(association.role),
       shareAmount: normalizeShareAmount(association.shareAmount),
       members: association.members.map(normalizeMember),
     }));
