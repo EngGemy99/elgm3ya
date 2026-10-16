@@ -25,11 +25,12 @@ function selectRound(current: number[], index: number, limit: number): number[] 
 interface DetailPageProps {
   association: Association | undefined;
   onBack: () => void;
+  onEdit?: (id: string) => void;
   onChange: (association: Association) => void;
   onDelete: (id: string) => void;
 }
 
-export function DetailPage({ association, onBack, onChange, onDelete }: DetailPageProps) {
+export function DetailPage({ association, onBack, onEdit, onChange, onDelete }: DetailPageProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   if (!association) {
@@ -193,10 +194,20 @@ export function DetailPage({ association, onBack, onChange, onDelete }: DetailPa
         </section>
         ) : null}
 
+        {onEdit ? (
+          <button
+            type="button"
+            onClick={() => onEdit(association.id)}
+            className="mt-2 h-12 rounded-2xl border border-line bg-white font-bold text-navy"
+          >
+            تعديل الجمعية
+          </button>
+        ) : null}
+
         <button
           type="button"
           onClick={() => setConfirmDelete(true)}
-          className="mt-2 h-12 rounded-2xl border border-red-200 bg-white font-bold text-red-700"
+          className="h-12 rounded-2xl border border-red-200 bg-white font-bold text-red-700"
         >
           حذف الجمعية
         </button>

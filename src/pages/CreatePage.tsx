@@ -11,24 +11,49 @@ import {
   parseAmount,
   payoutAmount,
   todayISO,
+  usedShares,
 } from "../lib/schedule.ts";
-import type { Association, AssociationRole, Cycle } from "../types.ts";
+import type { Association, AssociationRole, Cycle, Member } from "../types.ts";
 
 interface CreatePageProps {
+  association?: Association;
   onBack: () => void;
-  onCreate: (association: Association) => void;
+  onSave: (association: Association) => void;
 }
 
 const MIN_SHARES = 2;
 const MAX_SHARES = 60;
 
-export function CreatePage({ onBack, onCreate }: CreatePageProps) {
-  const [name, setName] = useState("");
-  const [role, setRole] = useState<AssociationRole>("owner");
-  const [cycle, setCycle] = useState<Cycle>("monthly");
-  const [shareCount, setShareCount] = useState(10);
-  const [shareAmount, setShareAmount] = useState("");
-  const [startDate, setStartDate] = useState(todayISO);
+function sanitizeMembers(
+  members: Member[],
+  role: AssociationRole,
+  shareCount: number,
+): Member[] {
+  const cleaned = members
+    .map((member) => ({
+      ...member,
+      roundIndexes: member.roundIndexes.filter((index) => index >= 0 && index < shareCount),
+    }))
+    .filter((member) => member.roundIndexes.length === member.shares);
+
+  if (role === "member") {
+    const me = cleaned.find((member) => member.isSelf);
+    return me ? [{ ...me, isSelf: true }] : [];
+  }
+
+  return cleaned;
+}
+
+export function CreatePage({ association, onBack, onSave }: CreatePageProps) {
+  const editing = Boolean(association);
+  const [name, setName] = useState(association?.name ?? "");
+  const [role, setRole] = useState<AssociationRole>(association?.role ?? "owner");
+  const [cycle, setCycle] = useState<Cycle>(association?.cycle ?? "monthly");
+  const [shareCount, setShareCount] = useState(association?.shareCount ?? 10);
+  const [shareAmount, setShareAmount] = useState(
+    association ? String(association.shareAmount) : "",
+  );
+  const [startDate, setStartDate] = useState(association?.startDate ?? todayISO);
   const [error, setError] = useState("");
 
   const previewEnd = useMemo(
@@ -37,6 +62,7 @@ export function CreatePage({ onBack, onCreate }: CreatePageProps) {
   );
   const parsedAmount = parseAmount(shareAmount);
   const payout = parsedAmount ? payoutAmount(shareCount, parsedAmount) : 0;
+  const occupied = association ? usedShares(association) : 0;
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -49,6 +75,20 @@ export function CreatePage({ onBack, onCreate }: CreatePageProps) {
       setError(`عدد الأسهم من ${MIN_SHARES} إلى ${MAX_SHARES}`);
       return;
     }
+    if (editing && role === "owner" && occupied > shareCount) {
+      setError(`عدد الأسهم أقل من الأسهم المستخدمة (${occupied})`);
+      return;
+    }
+    if (editing) {
+      const maxRound = Math.max(
+        -1,
+        ...(association?.members.flatMap((member) => member.roundIndexes) ?? []),
+      );
+      if (maxRound >= shareCount) {
+        setError("في أدوار أعلى من عدد الأسهم الجديد. احذفها أو زوّد الأسهم");
+        return;
+      }
+    }
     if (!parsedAmount) {
       setError("اكتب المبلغ اللي هيدفعه كل فرد");
       return;
@@ -58,16 +98,18 @@ export function CreatePage({ onBack, onCreate }: CreatePageProps) {
       return;
     }
 
-    onCreate({
-      id: createId(),
+    const members = sanitizeMembers(association?.members ?? [], role, shareCount);
+
+    onSave({
+      id: association?.id ?? createId(),
       name: trimmed,
       role,
       cycle,
       shareCount,
       shareAmount: parsedAmount,
       startDate,
-      members: [],
-      createdAt: new Date().toISOString(),
+      members,
+      createdAt: association?.createdAt ?? new Date().toISOString(),
     });
   }
 
@@ -82,10 +124,13 @@ export function CreatePage({ onBack, onCreate }: CreatePageProps) {
         >
           →
         </button>
-        <h1 className="text-xl font-bold text-navy">جمعية جديدة</h1>
+        <h1 className="text-xl font-bold text-navy">{editing ? "تعديل الجمعية" : "جمعية جديدة"}</h1>
       </header>
 
-      <form onSubmit={handleSubmit} className="scroll-area flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+      <form
+        onSubmit={handleSubmit}
+        className="scroll-area flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+      >
         <label className="flex flex-col gap-2">
           <span className="text-sm font-semibold text-navy">اسم الجمعية</span>
           <input
@@ -180,6 +225,9 @@ export function CreatePage({ onBack, onCreate }: CreatePageProps) {
               +
             </button>
           </div>
+          {editing && occupied > 0 ? (
+            <span className="text-sm text-muted">مستخدم حاليًا: {occupied} أسهم</span>
+          ) : null}
         </label>
 
         <label className="flex flex-col gap-2">
@@ -241,7 +289,7 @@ export function CreatePage({ onBack, onCreate }: CreatePageProps) {
           type="submit"
           className="mt-auto h-12 rounded-2xl bg-green text-base font-bold text-white"
         >
-          حفظ الجمعية
+          {editing ? "حفظ التعديلات" : "حفظ الجمعية"}
         </button>
       </form>
     </>

@@ -5,9 +5,13 @@ import { navigate, parseHash, type Route } from "./lib/route.ts";
 import { CreatePage } from "./pages/CreatePage.tsx";
 import { DetailPage } from "./pages/DetailPage.tsx";
 import { HomePage } from "./pages/HomePage.tsx";
+import { WelcomePage } from "./pages/WelcomePage.tsx";
 import type { Association } from "./types.ts";
 
+const WELCOME_KEY = "elgm3ya.welcome.seen";
+
 function App() {
+  const [showWelcome, setShowWelcome] = useState(() => sessionStorage.getItem(WELCOME_KEY) !== "1");
   const [route, setRoute] = useState<Route>(() => parseHash(window.location.hash));
   const [associations, setAssociations] = useState<Association[]>(() => loadAssociations());
 
@@ -23,7 +27,22 @@ function App() {
   }
 
   const current =
-    route.name === "detail" ? associations.find((item) => item.id === route.id) : undefined;
+    route.name === "detail" || route.name === "edit"
+      ? associations.find((item) => item.id === route.id)
+      : undefined;
+
+  if (showWelcome) {
+    return (
+      <AppShell>
+        <WelcomePage
+          onStart={() => {
+            sessionStorage.setItem(WELCOME_KEY, "1");
+            setShowWelcome(false);
+          }}
+        />
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>
@@ -38,17 +57,40 @@ function App() {
       {route.name === "new" ? (
         <CreatePage
           onBack={() => navigate("/")}
-          onCreate={(association) => {
+          onSave={(association) => {
             updateAssociations([association, ...associations]);
             navigate(`/a/${encodeURIComponent(association.id)}`);
           }}
         />
       ) : null}
 
+      {route.name === "edit" ? (
+        current ? (
+          <CreatePage
+            association={current}
+            onBack={() => navigate(`/a/${encodeURIComponent(current.id)}`)}
+            onSave={(association) => {
+              updateAssociations(
+                associations.map((item) => (item.id === association.id ? association : item)),
+              );
+              navigate(`/a/${encodeURIComponent(association.id)}`);
+            }}
+          />
+        ) : (
+          <DetailPage
+            association={undefined}
+            onBack={() => navigate("/")}
+            onChange={() => undefined}
+            onDelete={() => undefined}
+          />
+        )
+      ) : null}
+
       {route.name === "detail" ? (
         <DetailPage
           association={current}
           onBack={() => navigate("/")}
+          onEdit={(id) => navigate(`/a/${encodeURIComponent(id)}/edit`)}
           onChange={(association) => {
             updateAssociations(
               associations.map((item) => (item.id === association.id ? association : item)),
